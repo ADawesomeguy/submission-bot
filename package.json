@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "@discordjs/rest": "^0.3.0",
+    "discord.js": "^13.2.0",
+    "dotenv": "^8.2.0",
+    "gitlog": "^4.0.4",
+    "log4js": "^6.4.3"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.15.0",
+    "@typescript-eslint/parser": "^5.15.0",
+    "eslint": "^8.11.0",
+    "nodemon": "^2.0.15",
+    "typescript": "^4.6.2"
+  },
+  "name": "bot",
+  "version": "0.0.0",
+  "scripts": {
+    "build": "yarn tsc",
+    "lint": "yarn run eslint ./src --ext .js,.jsx,.ts,.tsx"
+  },
+  "keywords": [
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "description": ""
+}

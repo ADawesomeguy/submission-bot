@@ -1,0 +1,15 @@
+version: '3.1'
+services:
+# Add extra services here such as DBs:
+#  mongo:
+#   image: mongo:4.4
+#   restart: always
+#   volumes: 
+#     - ./data:/data/db
+
+# Add bot service here
+  bot:
+    image: bot:[tag]
+    restart: unless-stopped
+    environment:
+        # environment variables here
