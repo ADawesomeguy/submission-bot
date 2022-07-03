@@ -13,6 +13,11 @@ const stageSubmissionSchema = new mongoose.Schema({
 		type: Number,
 		required: false,
 	}, /* percent */
+	accepted: {
+		type: Boolean,
+		default: false,
+		required: true,
+	},
 });
 
 export default mongoose.model('StageSubmission', stageSubmissionSchema);

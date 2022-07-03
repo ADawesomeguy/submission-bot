@@ -1,15 +1,33 @@
-import {GuildChannel, MessageReaction, TextChannel, User} from 'discord.js';
+import { MessageEmbed, MessageReaction, TextChannel, User } from 'discord.js';
 import stageSubmission from '../models/stage-submission';
 import log from '../helpers/log';
-import { Model } from 'mongoose';
 
 export const name = 'messageReactionAdd';
 
 export const once = false;
 
+async function getNumRobux(currentId : string) : Promise<number> {
+	const Subs = {
+		'Mega Easy': await stageSubmission.find({ accepted: true, difficulty: 'Mega Easy' }),
+		'Easy': await stageSubmission.find({ accepted: true, difficulty: 'Easy' }),
+		'Medium': await stageSubmission.find({ accepted: true, difficulty: 'Medium' }),
+		'Hard': await stageSubmission.find({ accepted: true, difficulty: 'Hard' }),
+		'Extreme': await stageSubmission.find({ accepted: true, difficulty: 'Extreme' }),
+	};
+
+	let baseline = Subs['Mega Easy'].length + 1; // prevents it from being too low to begin with
+
+	for (const key in Subs) {
+		baseline = Math.min(baseline, Subs[key].length + 1);
+	}
+
+	const currentSub = await stageSubmission.findById(currentId);
+	return 5000 * ((baseline / (Subs[currentSub?.difficulty as string].length + 1)) * (currentSub?.payment || 0) / 100);
+}
+
 export async function execute(reaction : MessageReaction, user : User) {
-	if (user.id != '745063586422063214') return;
-	if (reaction.message.channel.id != '993215664623980554') return;
+	if (!['820351512165351455', '761895875361505281'].includes(user.id)) return;
+	if (reaction.message.channel.id != '993283147951243276') return;
 
 	if (reaction.partial) {
 		reaction.fetch()
@@ -53,11 +71,25 @@ export async function execute(reaction : MessageReaction, user : User) {
 				return;
 			}
 			else if (![submission.difficulty, submission.payment].includes(undefined)) {
-				const acceptedStagesChannel = await reaction.message.guild?.channels.fetch('993245197645402234', );
-				await (acceptedStagesChannel as TextChannel).send({ content: `${submission.difficulty}\n${submission.payment}%` });
+				const numRobux = await getNumRobux(reaction.message.id);
+				await stageSubmission.findByIdAndUpdate(submission._id, { accepted: true });
+				const acceptedStagesChannel = await reaction.message.guild?.channels.fetch('993283147791867999');
+
+				const acceptedSubmissionEmbed = new MessageEmbed()
+					.setColor(submission.payment === 100 ? '#00ff77' : '#ffff00')
+					.setDescription(`[Jump!](${reaction.message.url})`)
+					.addField('Creator', `<@${reaction.message.author?.id}>`)
+					.addField('Stage Difficulty', submission.difficulty)
+					.addField('Info Provided', `\`\`\`${reaction.message.content}\`\`\``)
+					.addField('Status', submission.payment === 100 ? 'Fully Accepted' : 'Accepted With Edits')
+					.addField('Payment', `${numRobux}`);
+
+				// await (acceptedStagesChannel as TextChannel).send({ content: `${submission.difficulty}\n${numRobux}` });
+				await (acceptedStagesChannel as TextChannel).send({ content: `<@${reaction.message.author?.id}>`, embeds: [acceptedSubmissionEmbed] });
 			}
 			else {
-				user.dmChannel?.send('Missing one of payment percentage or difficulty!')
+				await reaction.remove();
+				user.send('Missing one of payment percentage or difficulty!')
 					.catch(err => {
 						log({ logger: 'reaction', content: `Something went wrong DMing the reaction sender: ${err}`, level: 'error' });
 					});
