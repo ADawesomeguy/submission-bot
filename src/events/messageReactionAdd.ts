@@ -42,10 +42,13 @@ async function sendNextStagePayments(paymentInfoChannel : TextChannel) : Promise
 	}
 
 	const paymentInfoEmbed = new MessageEmbed()
+		.setColor('#ffffff')
+		.setTimestamp()
 		.setTitle('Payment Information Update');
 
 	for (const key in Subs) {
-		paymentInfoEmbed.addField(key, `${Math.max(Math.round(5000 * (baseline / (Subs[key].length + 1))), 1000)}`);
+		const maxAmount = Math.max(Math.round(5000 * (baseline / (Subs[key].length + 1))), 1000);
+		paymentInfoEmbed.addField(key + ' Stages', `> Total: ${Subs[key].length}\n> Max Payment: ${maxAmount} Robux`);
 	}
 
 	await paymentInfoChannel.send({ embeds: [paymentInfoEmbed] });
@@ -115,6 +118,7 @@ export async function execute(reaction : MessageReaction, user : User) {
 
 				const acceptedSubmissionEmbed = new MessageEmbed()
 					.setColor(submission.paymentPercentage === 100 ? '#00ff77' : '#ffff00')
+					.setTimestamp()
 					.setAuthor({ name: reaction.message.author?.tag as string, iconURL: reaction.message.author?.displayAvatarURL() })
 					.setDescription(`[Jump!](${reaction.message.url})`)
 					.addField('Creator', `<@${reaction.message.author?.id}>`)
@@ -169,9 +173,9 @@ export async function execute(reaction : MessageReaction, user : User) {
 	}
 
 	/**
-	 * Verified
+	 * Verify
 	 */
-	case 'Verified': {
+	case 'Verify': {
 		if (reaction.message.channel.id != constants['submissionsChannel']) return;
 		await stageSubmission.findByIdAndUpdate(reaction.message.id, { verified: true }, { upsert: false });
 		break;

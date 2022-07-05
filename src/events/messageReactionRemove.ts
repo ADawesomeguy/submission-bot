@@ -33,8 +33,9 @@ export async function execute(reaction : MessageReaction, user : User) {
 		await stageSubmission.findByIdAndUpdate(reaction.message.id, { $unset: { difficulty: '' } });
 		break;
 
-	case 'Verified':
+	case 'Verify':
 		await stageSubmission.findByIdAndUpdate(reaction.message.id, { verified: false });
+		break;
 
 	/**
 	 * Other (generally payment numbers)
