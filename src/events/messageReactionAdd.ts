@@ -1,19 +1,26 @@
 import { MessageEmbed, MessageReaction, TextChannel, User } from 'discord.js';
+
 import stageSubmission from '../models/stage-submission';
+
 import log from '../helpers/log';
+import constants from '../helpers/constants';
 
 export const name = 'messageReactionAdd';
 
 export const once = false;
 
-async function getNumRobux(currentId : string) : Promise<number> {
-	const Subs = {
+async function getSubs() : Promise<Record<string, any>> {
+	return {
 		'Mega Easy': await stageSubmission.find({ accepted: true, difficulty: 'Mega Easy' }),
 		'Easy': await stageSubmission.find({ accepted: true, difficulty: 'Easy' }),
 		'Medium': await stageSubmission.find({ accepted: true, difficulty: 'Medium' }),
 		'Hard': await stageSubmission.find({ accepted: true, difficulty: 'Hard' }),
 		'Extreme': await stageSubmission.find({ accepted: true, difficulty: 'Extreme' }),
 	};
+}
+
+async function getNumRobux(currentId : string) : Promise<number> {
+	const Subs = await getSubs();
 
 	let baseline = Subs['Mega Easy'].length + 1; // prevents it from being too low to begin with
 
@@ -22,15 +29,38 @@ async function getNumRobux(currentId : string) : Promise<number> {
 	}
 
 	const currentSub = await stageSubmission.findById(currentId);
-	return 5000 * ((baseline / (Subs[currentSub?.difficulty as string].length + 1)) * (currentSub?.payment || 0) / 100);
+	return Math.max(Math.round(5000 * ((baseline / (Subs[currentSub?.difficulty as string].length + (currentSub?.accepted ? 0 : 1))) * (currentSub?.paymentPercentage || 0) / 100)), 1000);
+}
+
+async function sendNextStagePayments(paymentInfoChannel : TextChannel) : Promise<void> {
+	const Subs = await getSubs();
+
+	let baseline = Subs['Mega Easy'].length + 1;
+
+	for (const key in Subs) {
+		baseline = Math.min(baseline, Subs[key].length + 1);
+	}
+
+	const paymentInfoEmbed = new MessageEmbed()
+		.setTitle('Payment Information Update');
+
+	for (const key in Subs) {
+		paymentInfoEmbed.addField(key, `${Math.max(Math.round(5000 * (baseline / (Subs[key].length + 1))), 1000)}`);
+	}
+
+	await paymentInfoChannel.send({ embeds: [paymentInfoEmbed] });
 }
 
 export async function execute(reaction : MessageReaction, user : User) {
-	if (!['820351512165351455', '761895875361505281'].includes(user.id)) return;
-	if (reaction.message.channel.id != '993283147951243276') return;
+	if (!constants['validUsers'].includes(user.id)) return;
 
 	if (reaction.partial) {
 		reaction.fetch()
+			.then(r => {
+				if (r.message.partial) {
+					r.message.fetch();
+				}
+			})
 			.catch(err => {
 				log({ logger: 'reaction', content: `Something went wrong fetching the reaction: ${err}`, level: 'error' });
 				return;
@@ -42,25 +72,32 @@ export async function execute(reaction : MessageReaction, user : User) {
 	 * Difficulties
 	 */
 	case 'MegaEasy':
-		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Mega Easy' }, { upsert: true, new: true });
+		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Mega Easy', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 	case 'Easy':
-		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Easy' }, { upsert: true, new: true });
+		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Easy', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 	case 'Medium':
-		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Medium' }, { upsert: true, new: true });
+		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Medium', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 	case 'Hard':
-		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Hard' }, { upsert: true, new: true });
+		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Hard', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 	case 'Extreme':
-		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Extreme' }, { upsert: true, new: true });
+		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Extreme', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 
 	/**
 	 * Upload
 	 */
 	case 'Upload': {
+		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		await reaction.message.fetch();
 		stageSubmission.findById(reaction.message.id, async (err, submission) => {
 			if (err) {
 				log({
@@ -70,22 +107,26 @@ export async function execute(reaction : MessageReaction, user : User) {
 				});
 				return;
 			}
-			else if (![submission.difficulty, submission.payment].includes(undefined)) {
+			else if (![submission?.difficulty, submission?.paymentPercentage].includes(undefined)) {
 				const numRobux = await getNumRobux(reaction.message.id);
 				await stageSubmission.findByIdAndUpdate(submission._id, { accepted: true });
-				const acceptedStagesChannel = await reaction.message.guild?.channels.fetch('993283147791867999');
+				const acceptedStagesChannel = await reaction.message.guild?.channels.fetch(constants['acceptedStagesChannel']);
+				const paymentInfoChannel = await reaction.message.guild?.channels.fetch(constants['paymentInfoChannel']);
 
 				const acceptedSubmissionEmbed = new MessageEmbed()
-					.setColor(submission.payment === 100 ? '#00ff77' : '#ffff00')
+					.setColor(submission.paymentPercentage === 100 ? '#00ff77' : '#ffff00')
+					.setAuthor({ name: reaction.message.author?.tag as string, iconURL: reaction.message.author?.displayAvatarURL() })
 					.setDescription(`[Jump!](${reaction.message.url})`)
 					.addField('Creator', `<@${reaction.message.author?.id}>`)
-					.addField('Stage Difficulty', submission.difficulty)
+					.addField('Stage Difficulty', submission.difficulty, true)
+					.addField('Stage ID', submission._id, true)
 					.addField('Info Provided', `\`\`\`${reaction.message.content}\`\`\``)
-					.addField('Status', submission.payment === 100 ? 'Fully Accepted' : 'Accepted With Edits')
-					.addField('Payment', `${numRobux}`);
+					.addField('Status', submission.paymentPercentage === 100 ? 'Fully Accepted' : 'Accepted With Edits', true)
+					.addField('Payment', `${numRobux} Robux`, true);
 
-				// await (acceptedStagesChannel as TextChannel).send({ content: `${submission.difficulty}\n${numRobux}` });
-				await (acceptedStagesChannel as TextChannel).send({ content: `<@${reaction.message.author?.id}>`, embeds: [acceptedSubmissionEmbed] });
+				const acceptanceMessage = await (acceptedStagesChannel as TextChannel).send({ content: `<@${reaction.message.author?.id}>`, embeds: [acceptedSubmissionEmbed] });
+				await stageSubmission.findByIdAndUpdate(reaction.message.id, { acceptanceMessageId: acceptanceMessage.id, paymentRequired: numRobux });
+				await sendNextStagePayments(paymentInfoChannel as TextChannel);
 			}
 			else {
 				await reaction.remove();
@@ -99,12 +140,51 @@ export async function execute(reaction : MessageReaction, user : User) {
 	}
 
 	/**
+	 * Paid
+	 */
+	case 'Paid': {
+		if (reaction.message.channel.id != constants['acceptedStagesChannel']) return;
+		stageSubmission.findOneAndUpdate({ acceptanceMessageId: reaction.message.id }, { payedOut: true }, { new: true }, async (err, submission) => {
+			if (err) {
+				log({
+					logger: 'submission',
+					content: `Failed to fetch submission with ID ${reaction.message.id}: ${err}`,
+					level: 'error',
+				});
+				return;
+			}
+			else {
+				const paymentLogChannel = await reaction.message.guild?.channels.fetch(constants['paymentLogChannel']);
+				const submissionsChannel = await reaction.message.guild?.channels.fetch(constants['submissionsChannel']);
+				const paymentLogEmbed = new MessageEmbed()
+					.setColor('#00ff77')
+					.setDescription(`<@${submission?.authorId}> has been payed out ${submission?.paymentRequired} Robux for their stage ${submission?._id}!`);
+				await (paymentLogChannel as TextChannel).send({ embeds: [paymentLogEmbed] });
+				const originalSubmissionMessage = await (submissionsChannel as TextChannel).messages.fetch(submission?._id as string);
+				await reaction.message.delete();
+				if (submission?.verified) await originalSubmissionMessage.delete();
+			}
+		});
+		break;
+	}
+
+	/**
+	 * Verified
+	 */
+	case 'Verified': {
+		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		await stageSubmission.findByIdAndUpdate(reaction.message.id, { verified: true }, { upsert: false });
+		break;
+	}
+
+	/**
 	 * Other (generally payment numbers)
 	 */
 	default:
 		// if it's a number, set the percentage
 		if (!Number.isNaN(Number(reaction.emoji.name))) {
-			await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { payment: Number(reaction.emoji.name) }, { upsert: true, new: true });
+			if (reaction.message.channel.id != constants['submissionsChannel']) return;
+			await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { paymentPercentage: Number(reaction.emoji.name), authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		}
 	}
 }
