@@ -51,6 +51,8 @@ async function sendNextStagePayments(paymentInfoChannel : TextChannel) : Promise
 		paymentInfoEmbed.addField(key + ' Stages', `> Total: ${Subs[key].length}\n> Max Payment: ${maxAmount} Robux`);
 	}
 
+	paymentInfoEmbed.setFooter({ text: 'Note: maximum payment is based on demand' });
+
 	await paymentInfoChannel.send({ embeds: [paymentInfoEmbed] });
 }
 
