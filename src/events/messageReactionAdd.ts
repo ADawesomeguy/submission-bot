@@ -29,7 +29,7 @@ async function getNumRobux(currentId : string) : Promise<number> {
 	}
 
 	const currentSub = await stageSubmission.findById(currentId);
-	return Math.max(Math.round(5000 * ((baseline / (Subs[currentSub?.difficulty as string].length + (currentSub?.accepted ? 0 : 1))) * (currentSub?.paymentPercentage || 0) / 100)), 1000);
+	return Math.round(Math.max(5000 * (baseline / (Subs[currentSub?.difficulty as string].length + (currentSub?.accepted ? 0 : 1))), 1000)) * ((currentSub?.paymentPercentage || 0) / 100);
 }
 
 async function sendNextStagePayments(paymentInfoChannel : TextChannel) : Promise<void> {
@@ -47,7 +47,7 @@ async function sendNextStagePayments(paymentInfoChannel : TextChannel) : Promise
 		.setTitle('Payment Information Update');
 
 	for (const key in Subs) {
-		const maxAmount = Math.max(Math.round(5000 * (baseline / (Subs[key].length + 1))), 1000);
+		const maxAmount = Math.round(Math.max(5000 * (baseline / (Subs[key].length + 1)), 1000));
 		paymentInfoEmbed.addField(key + ' Stages', `> Total: ${Subs[key].length}\n> Max Payment: ${maxAmount} Robux`);
 	}
 
