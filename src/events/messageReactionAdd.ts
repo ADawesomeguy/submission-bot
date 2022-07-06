@@ -29,7 +29,7 @@ async function getNumRobux(currentId : string) : Promise<number> {
 	}
 
 	const currentSub = await stageSubmission.findById(currentId);
-	return Math.round(Math.max(5000 * (baseline / (Subs[currentSub?.difficulty as string].length + (currentSub?.accepted ? 0 : 1))), 1000)) * ((currentSub?.paymentPercentage || 0) / 100);
+	return Math.round(Math.round(Math.max(5000 * (baseline / (Subs[currentSub?.difficulty as string].length + (currentSub?.accepted ? 0 : 1))), 1000)) * ((currentSub?.paymentPercentage || 0) / 100));
 }
 
 async function sendNextStagePayments(paymentInfoChannel : TextChannel) : Promise<void> {
