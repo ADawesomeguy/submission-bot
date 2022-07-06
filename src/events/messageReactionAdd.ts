@@ -177,7 +177,15 @@ export async function execute(reaction : MessageReaction, user : User) {
 	 */
 	case 'Verify': {
 		if (reaction.message.channel.id != constants['submissionsChannel']) return;
-		await stageSubmission.findByIdAndUpdate(reaction.message.id, { verified: true }, { upsert: false });
+		const acceptedStagesChannel = await reaction.message.guild?.channels.fetch(constants['acceptedStagesChannel']);
+		const submission = await stageSubmission.findByIdAndUpdate(reaction.message.id, { verified: true }, { new: true, upsert: false });
+		await (acceptedStagesChannel as TextChannel).messages.fetch(submission?.acceptanceMessageId as string)
+			.then(m => {
+				m.react('<:Verify:993658843349389387>');
+			})
+			.catch(e => {
+				log({ logger: 'reaction', content: `Failed to reacted to accepted stage message: ${e}`, level: 'error' });
+			});
 		break;
 	}
 
