@@ -164,7 +164,7 @@ export async function execute(reaction : MessageReaction, user : User) {
 				const submissionsChannel = await reaction.message.guild?.channels.fetch(constants['submissionsChannel']);
 				const paymentLogEmbed = new MessageEmbed()
 					.setColor('#00ff77')
-					.setDescription(`<@${submission?.authorId}> has been payed out ${submission?.paymentRequired} Robux for their stage ${submission?._id}!`);
+					.setDescription(`<@${submission?.authorId}> has been paid ${submission?.paymentRequired} Robux for their stage.\nStage ID: ${submission?._id}`);
 				await (paymentLogChannel as TextChannel).send({ embeds: [paymentLogEmbed] });
 				const originalSubmissionMessage = await (submissionsChannel as TextChannel).messages.fetch(submission?._id as string);
 				await reaction.message.delete();
