@@ -57,8 +57,6 @@ async function sendNextStagePayments(paymentInfoChannel : TextChannel) : Promise
 }
 
 export async function execute(reaction : MessageReaction, user : User) {
-	if (!constants['validUsers'].includes(user.id)) return;
-
 	if (reaction.partial) {
 		reaction.fetch()
 			.then(r => {
@@ -77,23 +75,23 @@ export async function execute(reaction : MessageReaction, user : User) {
 	 * Difficulties
 	 */
 	case 'MegaEasy':
-		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		if (reaction.message.channel.id != constants['submissionsChannel'] || !constants['validUsers'].includes(user.id)) return;
 		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Mega Easy', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 	case 'Easy':
-		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		if (reaction.message.channel.id != constants['submissionsChannel'] || !constants['validUsers'].includes(user.id)) return;
 		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Easy', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 	case 'Medium':
-		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		if (reaction.message.channel.id != constants['submissionsChannel'] || !constants['validUsers'].includes(user.id)) return;
 		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Medium', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 	case 'Hard':
-		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		if (reaction.message.channel.id != constants['submissionsChannel'] || !constants['validUsers'].includes(user.id)) return;
 		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Hard', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 	case 'Extreme':
-		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		if (reaction.message.channel.id != constants['submissionsChannel'] || !constants['validUsers'].includes(user.id)) return;
 		await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { difficulty: 'Extreme', authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		break;
 
@@ -101,7 +99,7 @@ export async function execute(reaction : MessageReaction, user : User) {
 	 * Upload
 	 */
 	case 'Upload': {
-		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		if (reaction.message.channel.id != constants['submissionsChannel'] || !constants['validUsers'].includes(user.id)) return;
 		await reaction.message.fetch();
 		stageSubmission.findById(reaction.message.id, async (err, submission) => {
 			if (err) {
@@ -149,7 +147,7 @@ export async function execute(reaction : MessageReaction, user : User) {
 	 * Paid
 	 */
 	case 'Paid': {
-		if (reaction.message.channel.id != constants['acceptedStagesChannel']) return;
+		if (reaction.message.channel.id != constants['acceptedStagesChannel'] || !reaction.message.member?.roles.cache.find(r => r.id === '946034586167685180')) return;
 		stageSubmission.findOneAndUpdate({ acceptanceMessageId: reaction.message.id }, { payedOut: true }, { new: true }, async (err, submission) => {
 			if (err) {
 				log({
@@ -164,7 +162,7 @@ export async function execute(reaction : MessageReaction, user : User) {
 				const submissionsChannel = await reaction.message.guild?.channels.fetch(constants['submissionsChannel']);
 				const paymentLogEmbed = new MessageEmbed()
 					.setColor('#00ff77')
-					.setDescription(`<@${submission?.authorId}> has been paid ${submission?.paymentRequired} Robux for their stage.\nStage ID: ${submission?._id}`);
+					.setDescription(`<@${submission?.authorId}> has been paid ${submission?.paymentRequired} Robux for their stage.\nStage ID: \`${submission?._id}\``);
 				await (paymentLogChannel as TextChannel).send({ embeds: [paymentLogEmbed] });
 				const originalSubmissionMessage = await (submissionsChannel as TextChannel).messages.fetch(submission?._id as string);
 				await reaction.message.delete();
@@ -178,7 +176,7 @@ export async function execute(reaction : MessageReaction, user : User) {
 	 * Verify
 	 */
 	case 'Verify': {
-		if (reaction.message.channel.id != constants['submissionsChannel']) return;
+		if (reaction.message.channel.id != constants['submissionsChannel'] || !constants['validUsers'].includes(user.id)) return;
 		const acceptedStagesChannel = await reaction.message.guild?.channels.fetch(constants['acceptedStagesChannel']);
 		const submission = await stageSubmission.findByIdAndUpdate(reaction.message.id, { verified: true }, { new: true, upsert: false });
 		await (acceptedStagesChannel as TextChannel).messages.fetch(submission?.acceptanceMessageId as string)
@@ -197,7 +195,7 @@ export async function execute(reaction : MessageReaction, user : User) {
 	default:
 		// if it's a number, set the percentage
 		if (!Number.isNaN(Number(reaction.emoji.name))) {
-			if (reaction.message.channel.id != constants['submissionsChannel']) return;
+			if (reaction.message.channel.id != constants['submissionsChannel'] || !constants['validUsers'].includes(user.id)) return;
 			await stageSubmission.findOneAndUpdate({ _id: reaction.message.id }, { paymentPercentage: Number(reaction.emoji.name), authorId: reaction.message.author?.id }, { upsert: true, new: true });
 		}
 	}
