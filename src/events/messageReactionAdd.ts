@@ -147,7 +147,8 @@ export async function execute(reaction : MessageReaction, user : User) {
 	 * Paid
 	 */
 	case 'Paid': {
-		if (reaction.message.channel.id != constants['acceptedStagesChannel'] || !reaction.message.member?.roles.cache.has('946034586167685180')) return;
+		const reactionMember = await reaction.message.guild?.members.fetch(user.id);
+		if (reaction.message.channel.id != constants['acceptedStagesChannel'] || !reactionMember?.roles.cache.has('94603458616768518')) return;
 		stageSubmission.findOneAndUpdate({ acceptanceMessageId: reaction.message.id }, { payedOut: true }, { new: true }, async (err, submission) => {
 			if (err) {
 				log({
