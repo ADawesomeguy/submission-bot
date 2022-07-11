@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { Client, Collection, Intents } from 'discord.js';
 import { token } from './helpers/env';
 import log from './helpers/log';
+import * as db from './helpers/db';
 
 const client = new Client({
 	intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS, Intents.FLAGS.GUILD_MEMBERS, Intents.FLAGS.DIRECT_MESSAGES, Intents.FLAGS.DIRECT_MESSAGE_REACTIONS],
@@ -35,5 +36,11 @@ for (const file of eventFiles) {
 			log({ logger: 'event', content: `Registered event ${file}!`, level: 'info' });
 		});
 }
+
+process.on('SIGINT', () => {
+	db.disconnect().then(() => {
+		process.exit(1);
+	});
+});
 
 client.login(token);
