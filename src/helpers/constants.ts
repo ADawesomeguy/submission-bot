@@ -1,9 +1,7 @@
 import { testing } from './env';
 
 const constants = {};
-constants['validUsers'] = [
-	'820351512165351455',
-];
+constants['validUsers'] = ['820351512165351455'];
 
 if (testing) {
 	constants['submissionsChannel'] = '993283147951243276';

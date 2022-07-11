@@ -16,7 +16,7 @@ const stageSubmissionSchema = new mongoose.Schema({
 	paymentPercentage: {
 		type: Number,
 		required: false,
-	}, /* percent */
+	} /* percent */,
 	accepted: {
 		type: Boolean,
 		default: false,
@@ -40,4 +40,7 @@ const stageSubmissionSchema = new mongoose.Schema({
 	},
 });
 
-export default mongoose.model('StageSubmission', stageSubmissionSchema);
+export default mongoose.model(
+	'StageSubmission',
+	stageSubmissionSchema
+);
