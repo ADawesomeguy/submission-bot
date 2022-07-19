@@ -3,6 +3,7 @@ import {
 	MessageReaction,
 	TextChannel,
 	User,
+	ThreadChannel,
 } from 'discord.js';
 
 import stageSubmission from '../models/stage-submission';
@@ -121,79 +122,76 @@ export async function execute(reaction: MessageReaction, user: User) {
 		 */
 	case 'MegaEasy':
 		if (
-			reaction.message.channel.id !=
+			(reaction.message.channel as ThreadChannel).parent?.id !=
 					constants['submissionsChannel'] ||
 				!constants['validUsers'].includes(user.id)
 		) {
 			return;
 		}
 		await stageSubmission.findOneAndUpdate(
-			{ _id: reaction.message.id },
+			{ _id: reaction.message.channel.id },
 			{
 				difficulty: 'Mega Easy',
-				authorId: reaction.message.author?.id,
 			},
 			{ upsert: true, new: true }
 		);
 		break;
 	case 'Easy':
 		if (
-			reaction.message.channel.id !=
+			(reaction.message.channel as ThreadChannel).parent?.id !=
 					constants['submissionsChannel'] ||
 				!constants['validUsers'].includes(user.id)
 		) {
 			return;
 		}
 		await stageSubmission.findOneAndUpdate(
-			{ _id: reaction.message.id },
-			{ difficulty: 'Easy', authorId: reaction.message.author?.id },
+			{ _id: reaction.message.channel.id },
+			{ difficulty: 'Easy' },
 			{ upsert: true, new: true }
 		);
 		break;
 	case 'Medium':
 		if (
-			reaction.message.channel.id !=
+			(reaction.message.channel as ThreadChannel).parent?.id !=
 					constants['submissionsChannel'] ||
 				!constants['validUsers'].includes(user.id)
 		) {
 			return;
 		}
 		await stageSubmission.findOneAndUpdate(
-			{ _id: reaction.message.id },
+			{ _id: reaction.message.channel.id },
 			{
 				difficulty: 'Medium',
-				authorId: reaction.message.author?.id,
 			},
 			{ upsert: true, new: true }
 		);
 		break;
 	case 'Hard':
 		if (
-			reaction.message.channel.id !=
+			(reaction.message.channel as ThreadChannel).parent?.id !=
 					constants['submissionsChannel'] ||
 				!constants['validUsers'].includes(user.id)
 		) {
 			return;
 		}
 		await stageSubmission.findOneAndUpdate(
-			{ _id: reaction.message.id },
-			{ difficulty: 'Hard', authorId: reaction.message.author?.id },
+			{ _id: reaction.message.channel.id },
+			{ difficulty: 'Hard' },
 			{ upsert: true, new: true }
 		);
 		break;
 	case 'Extreme':
 		if (
-			reaction.message.channel.id !=
+			(reaction.message.channel as ThreadChannel).parent?.id !=
 					constants['submissionsChannel'] ||
 				!constants['validUsers'].includes(user.id)
 		) {
 			return;
 		}
 		await stageSubmission.findOneAndUpdate(
-			{ _id: reaction.message.id },
+			{ _id: reaction.message.channel.id },
 			{
 				difficulty: 'Extreme',
-				authorId: reaction.message.author?.id,
 			},
 			{ upsert: true, new: true }
 		);
@@ -204,7 +202,7 @@ export async function execute(reaction: MessageReaction, user: User) {
 		 */
 	case 'Upload': {
 		if (
-			reaction.message.channel.id !=
+			(reaction.message.channel as ThreadChannel).parent?.id !=
 					constants['submissionsChannel'] ||
 				!constants['validUsers'].includes(user.id)
 		) {
@@ -212,12 +210,12 @@ export async function execute(reaction: MessageReaction, user: User) {
 		}
 		await reaction.message.fetch();
 		stageSubmission.findById(
-			reaction.message.id,
+			reaction.message.channel.id,
 			async (err, submission) => {
 				if (err) {
 					log({
 						logger: 'submission',
-						content: `Failed to fetch submission with ID ${reaction.message.id}: ${err}`,
+						content: `Failed to fetch submission with ID ${reaction.message.channel.id}: ${err}`,
 						level: 'error',
 					});
 					return;
@@ -228,7 +226,7 @@ export async function execute(reaction: MessageReaction, user: User) {
 						submission?.paymentPercentage,
 					].includes(undefined)
 				) {
-					const numRobux = await getNumRobux(reaction.message.id);
+					const numRobux = await getNumRobux(reaction.message.channel.id);
 					await stageSubmission.findByIdAndUpdate(submission._id, {
 						accepted: true,
 					});
@@ -255,7 +253,7 @@ export async function execute(reaction: MessageReaction, user: User) {
 						.setDescription(`[Jump!](${reaction.message.url})`)
 						.addField(
 							'Creator',
-							`<@${reaction.message.author?.id}>`
+							`<@${submission.authorId}>`
 						)
 						.addField(
 							'Stage Difficulty',
@@ -265,7 +263,7 @@ export async function execute(reaction: MessageReaction, user: User) {
 						.addField('Stage ID', submission._id, true)
 						.addField(
 							'Info Provided',
-							`\`\`\`${reaction.message.content}\`\`\``
+							`${reaction.message.content ? `\`\`\`${reaction.message.content}\`\`\`` : 'None'}`
 						)
 						.addField(
 							'Status',
@@ -283,7 +281,7 @@ export async function execute(reaction: MessageReaction, user: User) {
 						embeds: [acceptedSubmissionEmbed],
 					});
 					await stageSubmission.findByIdAndUpdate(
-						reaction.message.id,
+						reaction.message.channel.id,
 						{
 							acceptanceMessageId: acceptanceMessage.id,
 							paymentRequired: numRobux,
@@ -319,9 +317,9 @@ export async function execute(reaction: MessageReaction, user: User) {
 		const reactionMember =
 				await reaction.message.guild?.members.fetch(user.id);
 		if (
-			reaction.message.channel.id !=
+			reaction.message.channel?.id !=
 					constants['acceptedStagesChannel'] ||
-				!reactionMember?.roles.cache.has('94603458616768518')
+				!reactionMember?.roles.cache.has(constants['headModRole'])
 		) {
 			return;
 		}
@@ -333,7 +331,7 @@ export async function execute(reaction: MessageReaction, user: User) {
 				if (err) {
 					log({
 						logger: 'submission',
-						content: `Failed to fetch submission with ID ${reaction.message.id}: ${err}`,
+						content: `Failed to fetch submission with ID ${reaction.message.channel.id}: ${err}`,
 						level: 'error',
 					});
 					return;
@@ -355,12 +353,12 @@ export async function execute(reaction: MessageReaction, user: User) {
 					await (paymentLogChannel as TextChannel).send({
 						embeds: [paymentLogEmbed],
 					});
-					const originalSubmissionMessage = await (
+					const submissionThread = await (
 							submissionsChannel as TextChannel
-					).messages.fetch(submission?._id as string);
+					).threads.fetch(submission?._id as string);
 					await reaction.message.delete();
 					if (submission?.verified) {
-						await originalSubmissionMessage.delete();
+						await submissionThread?.setArchived(true);
 					}
 				}
 			}
@@ -373,7 +371,7 @@ export async function execute(reaction: MessageReaction, user: User) {
 		 */
 	case 'Verify': {
 		if (
-			reaction.message.channel.id !=
+			(reaction.message.channel as ThreadChannel).parent?.id !=
 					constants['submissionsChannel'] ||
 				!constants['validUsers'].includes(user.id)
 		) {
@@ -384,7 +382,7 @@ export async function execute(reaction: MessageReaction, user: User) {
 					constants['acceptedStagesChannel']
 				);
 		const submission = await stageSubmission.findByIdAndUpdate(
-			reaction.message.id,
+			reaction.message.channel.id,
 			{ verified: true },
 			{ new: true, upsert: false }
 		);
@@ -410,17 +408,16 @@ export async function execute(reaction: MessageReaction, user: User) {
 		// if it's a number, set the percentage
 		if (!Number.isNaN(Number(reaction.emoji.name))) {
 			if (
-				reaction.message.channel.id !=
+				(reaction.message.channel as ThreadChannel).parent?.id !=
 						constants['submissionsChannel'] ||
 					!constants['validUsers'].includes(user.id)
 			) {
 				return;
 			}
 			await stageSubmission.findOneAndUpdate(
-				{ _id: reaction.message.id },
+				{ _id: reaction.message.channel.id },
 				{
 					paymentPercentage: Number(reaction.emoji.name),
-					authorId: reaction.message.author?.id,
 				},
 				{ upsert: true, new: true }
 			);
