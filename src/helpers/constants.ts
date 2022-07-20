@@ -11,6 +11,7 @@ if (testing) {
 	constants['headModRole'] = '993283147544408131';
 
 	constants['validUsers'].push('745063586422063214');
+	constants['validUsers'].push('761895875361505281');
 }
 else {
 	constants['submissionsChannel'] = '934249193114054666';

@@ -1,6 +1,7 @@
 // Imported to build the slash command exported from here
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { CommandInteraction, TextChannel } from 'discord.js';
+import log from '../helpers/log';
 import constants from '../helpers/constants';
 
 import stageSubmission from '../models/stage-submission';
@@ -17,7 +18,7 @@ export const data = new SlashCommandBuilder()
 	.addStringOption(option =>
 		option.setName('info')
 			.setDescription('Any extra info regarding the submission')
-			.setRequired(false)
+			.setRequired(true)
 	);
 
 // Execute function is what will be run when the interaction is received
@@ -32,6 +33,17 @@ export async function execute(interaction : CommandInteraction) {
 		.then(async t => {
 			await t.edit({ name: t.name + ' - ' + t.id });
 			await t.members.add(interaction.user.id);
+			constants['validUsers'].forEach((u : string) => {
+				interaction.guild?.members.fetch(u)
+					.then(user => t.members.add(user))
+					.catch(err => {
+						log({
+							logger: 'submit',
+							content: `Failed to add admin ${u} to thread: ${err}`,
+							level: 'error',
+						});
+					});
+			});
 			const file = interaction.options.getAttachment('file');
 			if (!file) {
 				return;
